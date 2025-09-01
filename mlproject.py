@@ -52,4 +52,62 @@ df4.location = df4.location.apply(lambda x: "other" if x in other_loc.index else
 print(df4.location.unique())
 location_stats2 = df4.groupby("location")["location"].agg("count").sort_values(ascending=False)
 print(location_stats2)
-print(df4.head(10))
+#print(df4.head(10))
+
+
+
+
+#PART 2
+
+
+
+
+#print(df4[df4.total_sqft/df4.BHK < 300].head(10))
+
+df5 = df4[~(df4.total_sqft/df4.BHK < 300)]
+#print(df5.shape)
+
+def remove_outliner(df):
+    df_out = pd.DataFrame()
+    for key, subdf in df.groupby("location"):
+        m = np.mean(subdf.price_per_sqft)
+        st = np.std(subdf.price_per_sqft)
+        reduced_df = subdf[(subdf.price_per_sqft > (m-st)) & (subdf.price_per_sqft <= (m+st))]
+        df_out = pd.concat([df_out,reduced_df],ignore_index=True)
+    return df_out
+df6 = remove_outliner(df5)
+#print(df6.shape)
+
+def plotul(df,location):
+    bhk2 = df[(df.location==location) & (df.BHK == 2)]
+    bhk3 = df[(df.location == location) & (df.BHK == 3)]
+    plt.scatter(bhk2.total_sqft, bhk2.price,color="blue", label= "2BHK", s=50)
+    plt.scatter(bhk3.total_sqft, bhk3.price, color="green", marker="+", label="3BHK",s=50)
+    plt.xlabel("total_sqft_area")
+    plt.ylabel("price")
+    plt.title(location)
+    plt.legend()
+    plt.show()
+
+#plotul(df6,"Rajaji Nagar")
+
+def remove_bhk_outliers(df):
+    exclude_indices = np.array([])
+    for location, location_df in df.groupby('location'):
+        bhk_stats = {}
+        for bhk, bhk_df in location_df.groupby('BHK'):
+            bhk_stats[bhk] = {
+                'mean': np.mean(bhk_df.price_per_sqft),
+                'std': np.std(bhk_df.price_per_sqft),
+                'count': bhk_df.shape[0]
+            }
+        for bhk, bhk_df in location_df.groupby('BHK'):
+            stats = bhk_stats.get(bhk-1)
+            if stats and stats['count']>5:
+                exclude_indices = np.append(exclude_indices, bhk_df[bhk_df.price_per_sqft<(stats['mean'])].index.values)
+    return df.drop(exclude_indices,axis='index')
+df7 = remove_bhk_outliers(df6)
+# df8 = df7.copy()
+#print(df7.shape)
+
+plotul(df7,"Rajaji Nagar")
