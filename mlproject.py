@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
 
 
 df = pd.read_csv("W:/vscode/Machine-Learning/MLPROJECT/bengaluru_house_prices.csv")
@@ -49,9 +51,9 @@ location_stats = df4.groupby("location")["location"].agg("count").sort_values(as
 
 other_loc = location_stats[location_stats<= 10]
 df4.location = df4.location.apply(lambda x: "other" if x in other_loc.index else x)
-print(df4.location.unique())
+#print(df4.location.unique())
 location_stats2 = df4.groupby("location")["location"].agg("count").sort_values(ascending=False)
-print(location_stats2)
+#print(location_stats2)
 #print(df4.head(10))
 
 
@@ -110,4 +112,40 @@ df7 = remove_bhk_outliers(df6)
 # df8 = df7.copy()
 #print(df7.shape)
 
-plotul(df7,"Rajaji Nagar")
+#plotul(df7,"Rajaji Nagar")
+
+
+#PART 3
+
+
+
+plt.hist(df7.price_per_sqft,rwidth=0.7)
+plt.xlabel("Price per sqft")
+plt.ylabel("Count")
+#plt.show()
+
+#print(df7[df7.bath>10])
+#print(df7[df7.bath > df7.BHK+2])
+
+df8 = df7[df7.bath < df7.BHK+2]
+#print(df8.shape)
+df9 = df8.drop(["size","price_per_sqft"],axis="columns")
+#print(df9.head())
+
+dummies = pd.get_dummies(df9.location)
+#print(dummies)
+
+df10 = pd.concat([df9,dummies],axis="columns")
+df11 = df10.drop(["other"],axis="columns")
+#print(df11)
+df12 = df11.drop("location",axis="columns")
+#print(df12.head(3))
+
+x = df12.drop("price",axis="columns")
+#print(x)
+y = df12.price
+
+x_train, x_test, y_train, y_test = train_test_split(x,y,test_size=0.2)
+model = LinearRegression()
+model.fit(x_train,y_train)
+print(model.score(x_test,y_test))
