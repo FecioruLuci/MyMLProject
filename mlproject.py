@@ -3,6 +3,13 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import ShuffleSplit
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.linear_model import Lasso
+from sklearn.tree import DecisionTreeRegressor
+import pickle
+import json
 
 
 df = pd.read_csv("W:/vscode/Machine-Learning/MLPROJECT/bengaluru_house_prices.csv")
@@ -148,4 +155,71 @@ y = df12.price
 x_train, x_test, y_train, y_test = train_test_split(x,y,test_size=0.2)
 model = LinearRegression()
 model.fit(x_train,y_train)
-print(model.score(x_test,y_test))
+#print(model.score(x_test,y_test))
+#print(cross_val_score(LinearRegression(), x, y, cv=ss))
+
+def best_model(x,y):
+    alg = {
+        "linear regresion":{
+            "model": LinearRegression(),
+            "params": {
+                "fit_intercept": [True,False]
+            }
+        },
+        "lasso":{
+            "model": Lasso(),
+            "params":{
+                "alpha": [1,2],
+                "selection": ["random", "cyclic"],
+            }
+        },
+        "decision tree":{
+            "model": DecisionTreeRegressor(),
+            "params":{
+                "criterion": ["squared_error", "friedman_mse"],
+                "splitter": ["best", "random"],
+            }
+        },
+
+    }
+
+    score = []
+    ss = ShuffleSplit(n_splits=10, test_size=0.2)
+    for alg_name, config in alg.items():
+        gs = GridSearchCV(config["model"], config["params"], cv=ss, return_train_score=False)
+        gs.fit(x,y)
+        score.append({
+            "model": alg_name,
+            "best_score": gs.best_score_,
+            "best_params": gs.best_params_
+        })
+    return pd.DataFrame(score, columns=["model", "best_score", "best_params"])
+
+#print(best_model(x,y))
+
+def predict_price(location,sqft,bath,bhk):    
+    loc_index = np.where(x.columns==location)[0][0]
+
+    z = np.zeros(len(x.columns))
+    z[0] = sqft
+    z[1] = bath
+    z[2] = bhk
+    if loc_index >= 0:
+        z[loc_index] = 1
+
+    return model.predict([z])[0]
+
+
+print(predict_price("1st Phase JP Nagar",1000,3,3))
+
+
+with open("home_price.pickle", "wb") as f:
+    pickle.dump(model,f)
+
+columns = {
+    "data_columns": [col.lower()for col in x.columns]
+
+}
+with open ("columns,json", "w") as f:
+    f.write(json.dumps(columns))
+
